@@ -89,7 +89,10 @@ def test(epoch, testloader, model, criterion, args, device):
             for i in range(len(dates)):
                 date = dates[i]
                 try:
-                    efi_tensor = torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device)
+                    if (args.model == 'Tformer') or (args.model == 'LeNet'):
+                        efi_tensor = torch.reshape(torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device), (361,720))
+                    else:
+                        efi_tensor = torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device)
                     loss_efi = crps_efi(mu[i,...], sigma[i,...], targets[i,...], efi_tensor)
                     test_loss_efi.append(loss_efi.item())
                 except KeyError:
