@@ -9,7 +9,10 @@ from torch import nn as nn
 from tqdm import tqdm
 import wandb
 from datetime import datetime
+from hanging_threads import start_monitoring
 import xarray as xr
+from models.tformer import Tformer_prepare
+from models.LeNet import LeNet_prepare
 
 best_crps = 0
 
@@ -31,6 +34,13 @@ def train(epoch, trainloader, model, optimizer, criterion, args, device):
         inputs, targets = inputs.to(device), targets.to(device)
         scale_mean, scale_std = scale_mean.to(device), scale_std.to(device)
         output = model(inputs)
+
+        # special case for tformer
+        if args.model == 'Tformer':
+            # extract mean and stddev from ensemble and save it in output
+            output_mean, output_std = estimate_mean_std(output)
+            output = torch.cat((torch.movedim(output_mean, 0, -1), torch.movedim(output_std, 0,-1)), dim=-1)
+
         mu = output[..., 0]*scale_std+scale_mean
         sigma = torch.exp(output[..., 1])*scale_std
         loss = criterion(mu, sigma, targets)
@@ -64,6 +74,13 @@ def test(epoch, testloader, model, criterion, args, device):
             inputs, targets = inputs.to(device), targets.to(device)
             scale_mean, scale_std = scale_mean.to(device), scale_std.to(device)
             output = model(inputs)
+
+            # special case for tformer
+            if args.model == 'Tformer':
+                # extract mean and stddev from ensemble and save it in output
+                output_mean, output_std = estimate_mean_std(output)
+                output = torch.cat((torch.movedim(output_mean, 0, -1), torch.movedim(output_std, 0,-1)), dim=-1)
+
             mu = output[..., 0]*scale_std+scale_mean
             sigma = torch.exp(output[..., 1])*scale_std
             loss = criterion(mu, sigma, targets)
@@ -164,7 +181,11 @@ def main(args):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = train_model(args, device)
 
-
+def estimate_mean_std(output_ensemble):
+        output_mean = output_ensemble.mean(dim=1)
+        output_std = output_ensemble.std(dim=1, unbiased=True)
+        output_std = output_std.clamp(min=1E-6)
+        return output_mean, output_std
 
 if __name__ == '__main__':
     args = args_parser()

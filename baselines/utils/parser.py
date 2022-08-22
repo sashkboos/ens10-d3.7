@@ -15,7 +15,7 @@ def args_parser():
                      help='Torch Seed (default: 16)')
 
     parser.add_argument('--model', type=str, default='UNet',
-                     choices=['UNet', 'MLP', 'EMOS'],
+                     choices=['UNet', 'MLP', 'EMOS', 'Tformer', 'LeNet'],
                      help='Model Architecture (default: UNet)')
 
     parser.add_argument('--ens-num', type=int, default=10,
