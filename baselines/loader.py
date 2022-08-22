@@ -335,7 +335,6 @@ class ENS10FullEnsembleDataset(Dataset):
             ds_ens10 = ds_ens10.stack(space=["latitude","longitude"])
             timestr = ds_ens10.valid_time.dt.strftime("%Y-%m-%d").item()
             ds_era5 = self.ds_era5.sel(time=timestr).compute()
-            #variable = #self.target_var
 
             inputs = torch.zeros((len(self.variables), self.num_ensemble, 361, 720))
             for k in range(len(self.variables)):
@@ -348,16 +347,8 @@ class ENS10FullEnsembleDataset(Dataset):
                 if (variable == self.target_var) or (variable == 'z' and self.target_var == 'z500') or (variable == 't' and self.target_var == 't850'):
                     values_tar = torch.reshape(torch.as_tensor(ds_ens10[variable].to_numpy()[:self.num_ensemble,:]), (1,self.num_ensemble,361,720))
             inputs = inputs.movedim(0,1)
-            #values_orig = torch.as_tensor(ds_ens10[variable].to_numpy()[:self.num_ensemble,:])
-            #if self.normalized:
-            #    minval, maxval = self.value_range[variable]
-            #    values = (values_orig - minval) / (maxval - minval)
-            #else:
-            #    values = values_orig
-            #inputs = values#.transpose(0, 1)
-            targets = torch.as_tensor(ds_era5.to_numpy())#.ravel()
+            targets = torch.as_tensor(ds_era5.to_numpy())
             scale_std, scale_mean = torch.std_mean(values_tar, dim=1, unbiased=False)
-            #inputs = torch.div(torch.sub(inputs, scale_mean), scale_std)
             if self.return_time:
                 return timestr, inputs, targets, scale_mean, scale_std
             else:
