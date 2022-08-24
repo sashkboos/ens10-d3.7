@@ -9,7 +9,10 @@ from torch import nn as nn
 from tqdm import tqdm
 import wandb
 from datetime import datetime
+from hanging_threads import start_monitoring
 import xarray as xr
+from models.tformer import Tformer_prepare
+from models.LeNet import LeNet_prepare
 
 best_crps = 0
 
@@ -163,7 +166,6 @@ def main(args):
         wandb.init(project="ENS10_benchmark", name=f"{args.model}_{args.target_var}@{datetime.now()}", config=args)
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = train_model(args, device)
-
 
 
 if __name__ == '__main__':
