@@ -147,9 +147,9 @@ class ENS10GridWindowDataset(Dataset):
                 inputs[-1, :] = lat.cos()*lon.cos()
             #inputs = inputs.transpose(0, 1) # shape: (#sample, #var+2)
             inputs = torch.reshape(inputs, (inputs.shape[0], 361, 720))
-            targets = torch.reshape(torch.as_tensor(self.ds_era5.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy()), (1, 361, 720))
-            scale_mean = torch.reshape(torch.as_tensor(self.ds_scale_mean.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy()), (1, 361, 720))
-            scale_std = torch.reshape(torch.as_tensor(self.ds_scale_std.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy()), (1, 361, 720))
+            targets = torch.as_tensor(self.ds_era5.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy())
+            scale_mean = torch.as_tensor(self.ds_scale_mean.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy())
+            scale_std = torch.as_tensor(self.ds_scale_std.isel(time=tind).stack(space=["lat","lon"]).compute().to_numpy())
             if self.return_time:
                 return self.ds_mean.time[tind].dt.strftime("%Y-%m-%d").item(), inputs, targets, scale_mean, scale_std
             else:
@@ -345,9 +345,9 @@ class ENS10FullEnsembleDataset(Dataset):
                     values = (values - minval) / (maxval - minval)
                 inputs[k, :] = values
                 if (variable == self.target_var) or (variable == 'z' and self.target_var == 'z500') or (variable == 't' and self.target_var == 't850'):
-                    values_tar = torch.reshape(torch.as_tensor(ds_ens10[variable].to_numpy()[:self.num_ensemble,:]), (1,self.num_ensemble,361,720))
+                    values_tar = torch.reshape(torch.as_tensor(ds_ens10[variable].to_numpy()[:self.num_ensemble,:]), (1,self.num_ensemble,361*720))
             inputs = inputs.movedim(0,1)
-            targets = torch.as_tensor(ds_era5.to_numpy())
+            targets = torch.reshape(torch.as_tensor(ds_era5.to_numpy()),(1,361*720))
             scale_std, scale_mean = torch.std_mean(values_tar, dim=1, unbiased=False)
             if self.return_time:
                 return timestr, inputs, targets, scale_mean, scale_std
