@@ -55,6 +55,8 @@ class transformer(nn.Module):
         embedded_tensor = self.embedding(inp)
         transformed_tensor = self.transformers(embedded_tensor)
         output_tensor = self.output_layer(transformed_tensor).squeeze(dim=-3)
+        output_mean, output_std = estimate_mean_std(output_tensor)
+        output_tensor = torch.cat((torch.movedim(output_mean, 0, -1), torch.movedim(output_std, 0,-1)), dim=-1)
         return output_tensor
 
 def Tformer_prepare(args):
@@ -301,6 +303,12 @@ def split_mean_perts(
     mean_tensor = in_tensor.mean(dim=dim, keepdims=True)
     perts_tensor = in_tensor - mean_tensor
     return mean_tensor, perts_tensor
+
+def estimate_mean_std(output_ensemble):
+        output_mean = output_ensemble.mean(dim=1)
+        output_std = output_ensemble.std(dim=1, unbiased=True)
+        output_std = output_std.clamp(min=1E-6)
+        return output_mean, output_std
 
 # for debugging
 if __name__ == '__main__':
