@@ -57,6 +57,7 @@ class transformer(nn.Module):
         output_tensor = self.output_layer(transformed_tensor).squeeze(dim=-3)
         output_mean, output_std = estimate_mean_std(output_tensor)
         output_tensor = torch.cat((torch.movedim(output_mean, 0, -1), torch.movedim(output_std, 0,-1)), dim=-1)
+        output_tensor = torch.reshape(output_tensor, (inp.shape[0], inp.shape[-2]*inp.shape[-1],2))
         return output_tensor
 
 def Tformer_prepare(args):

@@ -92,7 +92,7 @@ class LeNet(nn.Module):
         output = self.dense2(x)
 
 
-        output = torch.reshape(output, (1,361,720,2))
+        output = torch.reshape(output, (inp.shape[0],inp.shape[-2]*inp.shape[-1],2))
         return output
 
 def LeNet_prepare(args):
