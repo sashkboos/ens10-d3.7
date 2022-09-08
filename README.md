@@ -1,3 +1,4 @@
+
 ![Logo](https://raw.githubusercontent.com/spcl/ens10/main/figures/post-processing_pipeline-1.png?raw=true)
 
 # ENS-10: A Dataset for Ensmeble Post-Processing.
@@ -55,6 +56,10 @@ For demo notebooks, see [here](https://github.com/spcl/climetlab-maelstrom-ens10
 ### Direct Download
 The dataset is hosted on the [ECMWF servers](https://storage.ecmwf.europeanweather.cloud/MAELSTROM_AP4/). All files can be downloaded alternatively using [this](http://spclstorage.inf.ethz.ch/projects/deep-weather/ENS10/) link. All files have `2018` prefix.
  
+
+### Ground Truth Data
+
+We use [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=form) as the ground truth data in our baselines. The data we used in our baselines can be downloaded using [this](http://spclstorage.inf.ethz.ch/projects/deep-weather/ERA5/) link.
 
 ### Train Baseline Models
 
