@@ -14,6 +14,18 @@ The dataset targets the prediction correction task at 48-hour lead time, which i
 
 For any questions, please create an issue. 
 
+## Leaderboard
+
+
+| Model | Z500 | T850 | T2m | Note  | Reference |
+|:-:|:-:|:-:|:-:|-|--------------------------------------------------------|
+| LeNet-Style |**74.41±0.109**|0.674±2e−4|0.659±4e−4| Following [Li, Wentao, et al.](https://www.sciencedirect.com/science/article/pii/S0022169421013512) | [Ashkboos, Saleh, et al. 2022](https://arxiv.org/abs/2206.14786) |
+| U-Net |76.25±0.106| 0.669±0.009 |0.644±0.006| Following [Grönquist, Peter, et al.](https://spcl.inf.ethz.ch/Publications/.pdf/rsta-weather-postproc.pdf) | [Ashkboos, Saleh, et al. 2022](https://arxiv.org/abs/2206.14786) |
+| Transformer |74.79±0.118|**0.665±0.002**|**0.626±0.004**| Following  [Finn, Tobias Sebastian](https://arxiv.org/pdf/2106.13924.pdf) | [Ashkboos, Saleh, et al. 2022](https://arxiv.org/abs/2206.14786)  |
+
+*To add a new record to the leaderboard, please create an issue with your code as well as your results on *Z500*, *T850*, and *T2m* variables. All the experiments should be run with three different random seeds and the issue should containt the mean and standard deviation of each experiment. 
+
+
 ## Requirements
 
 To install requirements:
