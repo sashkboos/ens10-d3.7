@@ -73,6 +73,12 @@ The dataset is hosted on the [ECMWF servers](https://storage.ecmwf.europeanweath
 
 We use [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=form) as the ground truth data in our baselines. The data we used in our baselines can be downloaded using [this](http://spclstorage.inf.ethz.ch/projects/deep-weather/ERA5/) link.
 
+### Extreme Forecast Index (EFI)
+
+The pre-computed EFI values (for `T2m`, `Z500`, and `T850` variables) over the test set (2016-2017 years) are available [here](http://storage.spcl.inf.ethz.ch/projects/deep-weather/ENS10/EFI/). 
+We also provide a set of scripts to extract the EFI [here](https://github.com/spcl/ens10/tree/main/EFI).  
+
+
 ### Train Baseline Models
 
 To train the baseline model(s) in the paper, run this command:
