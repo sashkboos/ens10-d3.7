@@ -7,7 +7,6 @@ import torch
 import os
 from torch import nn as nn
 from tqdm import tqdm
-import wandb
 from datetime import datetime
 from hanging_threads import start_monitoring
 import xarray as xr
@@ -21,34 +20,30 @@ scale_dict = {"z500": (52000, 7000), "t850": (265, 45), "t2m": (270, 50)}
 
 # Training
 def train(epoch, trainloader, model, optimizer, criterion, args, device):
-
     model.train()
     train_loss = []
     offset, scale = scale_dict[args.target_var]
 
     for batch_idx, (inputs, targets, scale_mean, scale_std) in tqdm(enumerate(trainloader), desc=f'Epoch {epoch}: ',
-                                             unit ="Batch", total=len(trainloader)):
+                                                                    unit="Batch", total=len(trainloader)):
 
         curr_iter = epoch * len(trainloader) + batch_idx
 
         inputs, targets = inputs.to(device), targets.to(device)
         scale_mean, scale_std = scale_mean.to(device), scale_std.to(device)
         output = model(inputs)
-        mu = output[..., 0]*scale_std+scale_mean
-        sigma = torch.exp(output[..., 1])*scale_std
+        if args.model == 'UNet':
+            mu = output[:, 0] * scale_std + scale_mean
+            sigma = torch.exp(output[:, 1]) * scale_std
+        else:
+            mu = output[..., 0] * scale_std + scale_mean
+            sigma = torch.exp(output[..., 1]) * scale_std
         loss = criterion(mu, sigma, targets)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
-        wandb.log({'train/Batch_crps': loss.item()})
         train_loss.append(loss.item())
-    
-    wandb.log({
-        'train/Epoch_crps': np.average(train_loss),
-        'train/Epoch': epoch
-    })
-
     print(f'Epoch {epoch} Avg. Loss: {np.average(train_loss)}')
 
 
@@ -58,17 +53,23 @@ def test(epoch, testloader, model, criterion, args, device):
     test_loss = []
     test_loss_efi = []
 
-    ds_efi = xr.load_dataarray(f"{args.data_path}/efi_{args.target_var}.nc").stack(space=["latitude","longitude"])
+    ds_efi = xr.load_dataarray(f"{args.data_path}/efi_{args.target_var}.nc").stack(space=["latitude", "longitude"])
     crps_efi = EECRPSGaussianLoss()
 
     with torch.no_grad():
-        for batch_idx, (dates, inputs, targets, scale_mean, scale_std) in tqdm(enumerate(testloader), desc=f'[Test] Epoch {epoch}: ',
-                                             unit ="Batch", total=len(testloader)):
+        for batch_idx, (dates, inputs, targets, scale_mean, scale_std) in tqdm(enumerate(testloader),
+                                                                               desc=f'[Test] Epoch {epoch}: ',
+                                                                               unit="Batch", total=len(testloader)):
+
             inputs, targets = inputs.to(device), targets.to(device)
             scale_mean, scale_std = scale_mean.to(device), scale_std.to(device)
             output = model(inputs)
-            mu = output[..., 0]*scale_std+scale_mean
-            sigma = torch.exp(output[..., 1])*scale_std
+            if args.model == 'UNet':
+                mu = output[:, 0] * scale_std + scale_mean
+                sigma = torch.exp(output[:, 1]) * scale_std
+            else:
+                mu = output[..., 0] * scale_std + scale_mean
+                sigma = torch.exp(output[..., 1]) * scale_std
             loss = criterion(mu, sigma, targets)
             test_loss.append(loss.item())
 
@@ -76,7 +77,10 @@ def test(epoch, testloader, model, criterion, args, device):
                 date = dates[i]
                 try:
                     efi_tensor = torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device)
-                    loss_efi = crps_efi(mu[i,...], sigma[i,...], targets[i,...], efi_tensor)
+                    loss_efi = crps_efi(mu[i, ...].reshape(efi_tensor.shape),
+                                        sigma[i, ...].reshape(efi_tensor.shape),
+                                        targets[i, ...].reshape(efi_tensor.shape),
+                                        efi_tensor)
                     test_loss_efi.append(loss_efi.item())
                 except KeyError:
                     pass
@@ -85,7 +89,6 @@ def test(epoch, testloader, model, criterion, args, device):
     crps_loss = np.average(test_loss)
     crps_loss_efi = np.average(test_loss_efi)
     print(f'Test CRPS: {crps_loss}, EFI-weighted CRPS: {crps_loss_efi}')
-    wandb.log({"test_loss": crps_loss})
 
     if crps_loss < best_crps:
         print('Saving..')
@@ -100,12 +103,12 @@ def test(epoch, testloader, model, criterion, args, device):
         torch.save(state, f'checkpoint/{args.model}_{args.target_var}_ens{args.ens_num}_best_ckpt.pth')
         best_crps = crps_loss
 
-    wandb.log({
-        'test/Epoch_crps': crps_loss,
-        'test/Epoch_wcrps': crps_loss_efi,
-        'test/Epoch': epoch,
-        'test/Best_crps': best_crps
-    })
+    print(
+        '\ntest/Epoch_crps: ', crps_loss,
+        '\ntest/Epoch_wcrps: ', crps_loss_efi,
+        '\ntest/Epoch: ', epoch,
+        '\ntest/Best_crps: ', best_crps
+    )
 
 
 def train_model(args, device):
@@ -142,9 +145,7 @@ def train_model(args, device):
     return model
 
 
-
 def main(args):
-
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -152,18 +153,17 @@ def main(args):
     if args.make_plot:
         args.ens_num = 10
         dataset = ENS10EnsembleDataset(data_path=args.data_path,
-                                       nsample=361*720,
+                                       nsample=361 * 720,
                                        target_var=args.target_var,
-                                       dataset_type='test', 
-                                       num_ensemble=args.ens_num, 
-                                       return_time=False, 
+                                       dataset_type='test',
+                                       num_ensemble=args.ens_num,
+                                       return_time=False,
                                        normalized=False)
         name = f"{args.target_var}_2016_2017"
         data_ranges = {"t2m": (190., 325.), "z500": (42811., 59160.), "t850": (215., 315.)}
         axis_names = {"t2m": r"T2m ($K$)", "z500": r"Z500 ($m^2/s^2$)", "t850": r"T850 ($K$)"}
         hist2d_plot(dataset, data_ranges[args.target_var], name, axis_names[args.target_var], f"./logs/{name}_hist2d")
     else:
-        wandb.init(project="ENS10_benchmark", name=f"{args.model}_{args.target_var}@{datetime.now()}", config=args)
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = train_model(args, device)
 

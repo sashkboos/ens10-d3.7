@@ -18,7 +18,8 @@ class ENS10GridDataset(Dataset):
     the mean/std of all variables in ENS10 on the same pressure level
     """
 
-    def __init__(self, data_path, target_var, dataset_type="train", normalized=True):
+    def __init__(self, data_path, target_var, dataset_type="train", normalized=True, return_time=False):
+        self.return_time = return_time
         suffix = ""
         if normalized:
             suffix = "_normalized"
@@ -29,17 +30,25 @@ class ENS10GridDataset(Dataset):
         if target_var in ["t850", "z500"]:
             ds_mean = xr.open_dataset(f"{data_path}/ENS10_pl_mean{suffix}.nc", chunks={"time": 10}).sel(time=time_range)
             ds_std = xr.open_dataset(f"{data_path}/ENS10_pl_std{suffix}.nc", chunks={"time": 10}).sel(time=time_range)
+            self.ds_scale_mean = xr.open_dataset(f"{data_path}/ENS10_pl_mean.nc", chunks={"time": 1},
+                                                 engine="h5netcdf").sel(time=time_range)
+            self.ds_scale_std = xr.open_dataset(f"{data_path}/ENS10_pl_std.nc", chunks={"time": 1},
+                                                engine="h5netcdf").sel(time=time_range)
             self.variables = ["Z", "T", "Q", "W", "D", "U", "V"]
             if target_var == "t850":
                 self.ds_mean = ds_mean.sel(plev=85000)
                 self.ds_std = ds_std.sel(plev=85000)
                 self.ds_era5 = xr.open_dataset(f"{data_path}/ERA5_t850.nc", chunks={"time": 10}).sel(
                     time=time_range).isel(plev=0).T
+                self.ds_scale_mean = self.ds_scale_mean.sel(plev=85000).T
+                self.ds_scale_std = self.ds_scale_std.sel(plev=85000).T
             elif target_var == "z500":
                 self.ds_mean = ds_mean.sel(plev=50000)
                 self.ds_std = ds_std.sel(plev=50000)
                 self.ds_era5 = xr.open_dataset(f"{data_path}/ERA5_z500.nc", chunks={"time": 10}).sel(
                     time=time_range).isel(plev=0).Z
+                self.ds_scale_mean = self.ds_scale_mean.sel(plev=50000).Z
+                self.ds_scale_std = self.ds_scale_std.sel(plev=50000).Z
         elif target_var in ["t2m"]:
             self.ds_mean = xr.open_dataset(f"{data_path}/ENS10_sfc_mean{suffix}.nc", chunks={"time": 10}).sel(
                 time=time_range)
@@ -47,6 +56,10 @@ class ENS10GridDataset(Dataset):
                 time=time_range)
             self.ds_era5 = xr.open_dataset(f"{data_path}/ERA5_sfc_t2m.nc", chunks={"time": 10}).sel(
                 time=time_range).T2M
+            self.ds_scale_mean = xr.open_dataset(f"{data_path}/ENS10_sfc_mean.nc", chunks={"time": 1},
+                                                 engine="h5netcdf").sel(time=time_range).T2M
+            self.ds_scale_std = xr.open_dataset(f"{data_path}/ENS10_sfc_std.nc", chunks={"time": 1},
+                                                engine="h5netcdf").sel(time=time_range).T2M
             self.variables = ['SSTK', 'TCW', 'TCWV', 'CP', 'MSL', 'TCC', 'U10M', 'V10M', 'T2M', 'TP', 'SKT']
 
         self.length = len(self.ds_era5)
@@ -68,7 +81,14 @@ class ENS10GridDataset(Dataset):
 
             targets = torch.from_numpy(self.ds_era5.compute().to_numpy()[idx])
 
-            return inputs, targets
+            scale_mean = torch.as_tensor(
+                self.ds_scale_mean.isel(time=idx).compute().to_numpy())
+            scale_std = torch.as_tensor(
+                self.ds_scale_std.isel(time=idx).compute().to_numpy())
+
+            if self.return_time:
+                return self.ds_mean.time[idx].dt.strftime("%Y-%m-%d").item(), inputs, targets, scale_mean, scale_std
+            return inputs, targets, scale_mean, scale_std
 
 
 
@@ -367,7 +387,7 @@ def loader_prepare(args):
 
         testloader = DataLoader(ENS10GridDataset(data_path=args.data_path,
                                                  target_var=args.target_var,
-                                                 dataset_type='test'),
+                                                 dataset_type='test', return_time=True),
                                 args.batch_size, shuffle=False, num_workers=2, pin_memory=True)
     elif args.model == 'MLP':
         trainloader = DataLoader(ENS10PointDataset(data_path=args.data_path,
