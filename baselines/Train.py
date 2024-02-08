@@ -8,7 +8,7 @@ from torch import nn as nn
 from tqdm import tqdm
 from datetime import datetime
 import xarray as xr
-
+import time
 best_crps = 0
 
 scale_dict = {"z500": (52000, 7000), "t850": (265, 45), "t2m": (270, 50)}
@@ -16,17 +16,25 @@ scale_dict = {"z500": (52000, 7000), "t850": (265, 45), "t2m": (270, 50)}
 
 # Training
 def train(epoch, trainloader, model, optimizer, criterion, args, device):
+    epoch_time = time.time()
+    data_loading_time = 0
+    iteration_time = []
+    iteration_computatoin = []
     model.train()
     train_loss = []
     offset, scale = scale_dict[args.target_var]
 
+    iteration_checkpoint_time = time.time()
+
     for batch_idx, (inputs, targets, scale_mean, scale_std) in tqdm(enumerate(trainloader), desc=f'Epoch {epoch}: ',
                                                                     unit="Batch", total=len(trainloader)):
-
+        iteration_time.append(time.time() - iteration_checkpoint_time)
+        iteration_checkpoint_time = time.time()
         curr_iter = epoch * len(trainloader) + batch_idx
 
         inputs, targets = inputs.to(device), targets.to(device)
         scale_mean, scale_std = scale_mean.to(device), scale_std.to(device)
+        iter_comp_time = time.time()
         output = model(inputs)
         if args.model == 'UNet':
             mu = output[:, 0] * scale_std + scale_mean
@@ -38,9 +46,14 @@ def train(epoch, trainloader, model, optimizer, criterion, args, device):
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        iteration_computatoin.append(time.time() - iter_comp_time)
 
         train_loss.append(loss.item())
     print(f'Epoch {epoch} Avg. Loss: {np.average(train_loss)}')
+    print(f'Training Epoch {epoch} Avg. Loss: {np.average(train_loss)} Time: {time.time() - epoch_time}')
+    print('Average training time per iter:', np.sum(iteration_time)/len(iteration_time))
+    print('Sum of the Compute Time:', np.sum(iteration_computatoin))
+    print('Epoch Loading Time: ', np.sum(iteration_time) - np.sum(iteration_computatoin))
 
 
 def test(epoch, testloader, model, criterion, args, device):
@@ -86,7 +99,8 @@ def test(epoch, testloader, model, criterion, args, device):
     # crps_loss_efi = np.average(test_loss_efi)
     print(f'Test CRPS: {crps_loss}')
 
-    if crps_loss < best_crps:
+    if epoch == 2:
+        saving_time = time.time()
         print('Saving..')
         state = {
             'model': model.state_dict(),
@@ -98,10 +112,10 @@ def test(epoch, testloader, model, criterion, args, device):
 
         torch.save(state, f'checkpoint/{args.model}_{args.target_var}_ens{args.ens_num}_best_ckpt.pth')
         best_crps = crps_loss
+        print('Saving time:', time.time() - saving_time)
 
     print(
         '\ntest/Epoch_crps: ', crps_loss,
-        # '\ntest/Epoch_wcrps: ', crps_loss_efi,
         '\ntest/Epoch: ', epoch,
         '\ntest/Best_crps: ', best_crps
     )
@@ -117,14 +131,6 @@ def train_model(args, device):
     model = eval(f'{args.model}_prepare')(args)
     model = model.to(device)
 
-    if args.resume:
-        # Load checkpoint.
-        print('==> Resuming from checkpoint..')
-        assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load('./checkpoint/ckpt.pth')
-        model.load_state_dict(checkpoint['model'])
-        best_crps = checkpoint['acc']
-        start_epoch = checkpoint['epoch']
 
     if args.loss == 'CRPS':
         criterion = CrpsGaussianLoss()
@@ -151,7 +157,9 @@ def main(args):
     else:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f'Using {device} device')
+        start_running_time = time.time()
         model = train_model(args, device)
+        print('the total running time is:', time.time() - start_running_time) 
 
 
 if __name__ == '__main__':
