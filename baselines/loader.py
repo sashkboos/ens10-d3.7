@@ -3,7 +3,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import xarray as xr
-import cf2cdm
 import glob
 from datetime import datetime
 import glob
