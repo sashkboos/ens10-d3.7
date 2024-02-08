@@ -150,6 +150,7 @@ def main(args):
        print('no plot!')
     else:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f'Using {device} device')
         model = train_model(args, device)
 
 
