@@ -55,6 +55,9 @@ if __name__ == "__main__":
     from utils import args_parser
     from Train import main
     args = args_parser()
+    args.epochs = 3
+    args.data_path = '/p/scratch/deepacf/ENS10_ERA5/netCDFs' #netCDF files
+    args.model = 'UNet'
     
     with GetPower() as measured_scope:
         print('Measuring Energy during main() call')
