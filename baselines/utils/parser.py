@@ -35,7 +35,7 @@ def args_parser():
     parser.add_argument('--lr', '-lr', default=1e-2, type=float,
                         help='Learning rate (default: 1e-2)')
 
-    parser.add_argument('--epochs', type=int , default=10,
+    parser.add_argument('--epochs', type=int , default=3,
                         help='Epochs (default: 10)')
 
     parser.add_argument('--batch-size', '-b', type=int , default=1,
