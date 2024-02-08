@@ -49,8 +49,8 @@ def test(epoch, testloader, model, criterion, args, device):
     test_loss = []
     # test_loss_efi = []
 
-    ds_efi = xr.load_dataarray(f"{args.data_path}/efi_{args.target_var}.nc").stack(space=["latitude", "longitude"])
-    crps_efi = EECRPSGaussianLoss()
+    # ds_efi = xr.load_dataarray(f"{args.data_path}/efi_{args.target_var}.nc").stack(space=["latitude", "longitude"])
+    # crps_efi = EECRPSGaussianLoss()
 
     with torch.no_grad():
         for batch_idx, (dates, inputs, targets, scale_mean, scale_std) in tqdm(enumerate(testloader),
