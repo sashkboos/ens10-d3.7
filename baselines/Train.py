@@ -2,7 +2,6 @@ import numpy as np
 from utils import args_parser, CrpsGaussianLoss, EECRPSGaussianLoss
 from models import *
 from loader import *
-from plot import scatter_plot, hist2d_plot
 import torch
 import os
 from torch import nn as nn
@@ -51,7 +50,7 @@ def test(epoch, testloader, model, criterion, args, device):
     global best_crps
     model.eval()
     test_loss = []
-    test_loss_efi = []
+    # test_loss_efi = []
 
     ds_efi = xr.load_dataarray(f"{args.data_path}/efi_{args.target_var}.nc").stack(space=["latitude", "longitude"])
     crps_efi = EECRPSGaussianLoss()
@@ -73,22 +72,22 @@ def test(epoch, testloader, model, criterion, args, device):
             loss = criterion(mu, sigma, targets)
             test_loss.append(loss.item())
 
-            for i in range(len(dates)):
-                date = dates[i]
-                try:
-                    efi_tensor = torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device)
-                    loss_efi = crps_efi(mu[i, ...].reshape(efi_tensor.shape),
-                                        sigma[i, ...].reshape(efi_tensor.shape),
-                                        targets[i, ...].reshape(efi_tensor.shape),
-                                        efi_tensor)
-                    test_loss_efi.append(loss_efi.item())
-                except KeyError:
-                    pass
+            # for i in range(len(dates)):
+            #     date = dates[i]
+            #     try:
+            #         efi_tensor = torch.as_tensor(ds_efi.sel(time=date).to_numpy()).to(device)
+            #         loss_efi = crps_efi(mu[i, ...].reshape(efi_tensor.shape),
+            #                             sigma[i, ...].reshape(efi_tensor.shape),
+            #                             targets[i, ...].reshape(efi_tensor.shape),
+            #                             efi_tensor)
+            #         test_loss_efi.append(loss_efi.item())
+            #     except KeyError:
+            #         pass
 
     # Save checkpoint.
     crps_loss = np.average(test_loss)
-    crps_loss_efi = np.average(test_loss_efi)
-    print(f'Test CRPS: {crps_loss}, EFI-weighted CRPS: {crps_loss_efi}')
+    # crps_loss_efi = np.average(test_loss_efi)
+    print(f'Test CRPS: {crps_loss}')
 
     if crps_loss < best_crps:
         print('Saving..')
@@ -105,7 +104,7 @@ def test(epoch, testloader, model, criterion, args, device):
 
     print(
         '\ntest/Epoch_crps: ', crps_loss,
-        '\ntest/Epoch_wcrps: ', crps_loss_efi,
+        # '\ntest/Epoch_wcrps: ', crps_loss_efi,
         '\ntest/Epoch: ', epoch,
         '\ntest/Best_crps: ', best_crps
     )
@@ -151,18 +150,7 @@ def main(args):
     torch.cuda.manual_seed_all(args.seed)
 
     if args.make_plot:
-        args.ens_num = 10
-        dataset = ENS10EnsembleDataset(data_path=args.data_path,
-                                       nsample=361 * 720,
-                                       target_var=args.target_var,
-                                       dataset_type='test',
-                                       num_ensemble=args.ens_num,
-                                       return_time=False,
-                                       normalized=False)
-        name = f"{args.target_var}_2016_2017"
-        data_ranges = {"t2m": (190., 325.), "z500": (42811., 59160.), "t850": (215., 315.)}
-        axis_names = {"t2m": r"T2m ($K$)", "z500": r"Z500 ($m^2/s^2$)", "t850": r"T850 ($K$)"}
-        hist2d_plot(dataset, data_ranges[args.target_var], name, axis_names[args.target_var], f"./logs/{name}_hist2d")
+       print('no plot!')
     else:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = train_model(args, device)
