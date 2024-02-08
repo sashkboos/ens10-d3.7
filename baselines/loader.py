@@ -382,12 +382,12 @@ def loader_prepare(args):
         trainloader = DataLoader(ENS10GridDataset(data_path=args.data_path,
                                                   target_var=args.target_var,
                                                   dataset_type='train'),
-                                 args.batch_size, shuffle=True, num_workers=2, pin_memory=True)
+                                 args.batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
         testloader = DataLoader(ENS10GridDataset(data_path=args.data_path,
                                                  target_var=args.target_var,
                                                  dataset_type='test', return_time=True),
-                                args.batch_size, shuffle=False, num_workers=2, pin_memory=True)
+                                args.batch_size, shuffle=False, num_workers=1, pin_memory=True)
     elif args.model == 'MLP':
         trainloader = DataLoader(ENS10PointDataset(data_path=args.data_path,
                                                    nsample=361*720,
