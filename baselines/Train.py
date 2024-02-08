@@ -135,7 +135,7 @@ def train_model(args, device):
     #optimizer = torch.optim.LBFGS(model.parameters(), lr=0.1, line_search_fn="strong_wolfe")
 
     for epoch in range(start_epoch, args.epochs):
-        train(epoch, trainloader, model, optimizer, criterion, args, device)
+        # train(epoch, trainloader, model, optimizer, criterion, args, device)
         test(epoch, testloader, model, criterion, args, device)
 
     return model
