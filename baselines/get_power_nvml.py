@@ -2,10 +2,19 @@ import os
 import subprocess
 import io
 import time
-
+import random
+import string
 import pandas as pd
 from pynvml import *
 from multiprocessing import Process, Queue, Event
+
+
+def get_random_string(length):
+    # choose from all lowercase letter
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    print("Random string of length", length, "is:", result_str)
+
 
 def power_loop(queue, event, interval):
     nvmlInit()
@@ -70,6 +79,9 @@ if __name__ == "__main__":
     print("Energy data:")
 
     print  (measured_scope.df)
+    pd_name = get_random_string(5)
+    print(f"Saving energy data to {pd_name}.csv")
+    measured_scope.df.to_csv(f"{pd_name}.csv")
     print("Energy-per-GPU-list:")
     energy_int = measured_scope.energy()
     print(f"integrated: {energy_int}")
