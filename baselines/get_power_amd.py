@@ -10,6 +10,8 @@ import string
 import pandas as pd
 from rsmiBindings import *
 from multiprocessing import Process, Queue, Event
+import torch
+torch.backends.cudnn.enabled = False
 
 def get_random_string(length):
     # choose from all lowercase letter
