@@ -10,7 +10,6 @@
 #SBATCH  --error=mi100_error-%j.err
  
 
-
 conda init
 conda activate
 python3 --version
