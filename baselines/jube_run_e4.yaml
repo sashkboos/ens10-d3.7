@@ -1,46 +1,88 @@
-name: analysis_example
-outpath: example4_run
-comment: analysing with JUBE
- 
+name: jubepower
+outpath: jubepower_run
+comment: Measure Node power on E4 machines
  
 parameterset:
-  name: app_parameters
-  parameter:
-    - name: flop
-      type: int
-      _: "8000000,700000,5000000,5000"
-    - name: nanoseconds
-      mode: python
-      type: float
-      _: "400+$flop*0.0005"
+  - name: executeset
+    init_with: platform.xml
+  - name: systemParameter
+    init_with: platform.xml
+    parameter:
+      - name: preprocess
+        mode: text
+        separator: |
+        _: |
+          label=$$(/opt/share/scripts/powerdiscovery/getlabel.sh)
+          echo "POWERMEASUREMENT: Label = $$label"
+          /opt/share/scripts/powerdiscovery/getpower_bg.sh 1000 &
+      - name: postprocess
+        mode: text
+        separator: |
+        _: |
+          kill -9 $$(cat ~/powerout.$$label.pid)
+          awk '{print "POWERMEASUREMENT: " $0}' ~/powerout.$$label.csv
+      - name: SRUN_CPUS_PER_TASK
+        export: true
+        _: ${SLURM_CPUS_PER_TASK}
+      - name: threadspertask
+        _: 1
+      - name: nodes
+        _: 1
+      - name: timelimit
+        _: "00:02:00"
+      - name: account
+        _: maelstrom
+      - name: queue
+        _: a-mil-hw
+      - name: executable
+        _: sleep
+      - name: args_exec
+        mode: text
+        _: >
+          10
  
 patternset:
-  name: performance_patterns
+  name: energy_patterns
   pattern:
-    - {name: time_pat, type: int, _: "Time: $jube_pat_fp ns"}
-    - {name: gflop_pat, type: float, _: "Gigaflops:\\s+$jube_pat_fp"}
+    - {name: label_pat, type: string, _: "POWERMEASUREMENT: Label = $jube_pat_wrd"}
+    - {name: time_pat, type: int, _: "POWERMEASUREMENT: $jube_pat_int,$jube_pat_nint,$jube_pat_nint"}
+    - {name: watt_pat, type: int, _: "POWERMEASUREMENT: $jube_pat_nint,$jube_pat_int,$jube_pat_nint"}
+    - {name: va_pat, type: int, _: "POWERMEASUREMENT: $jube_pat_nint,$jube_pat_nint,$jube_pat_int"}
  
 analyser:
-  name: analyse_performance
-  use: performance_patterns
+  name: analyse_energy
+  use: energy_patterns
   analyse:
-    step: print_performance
-    file: stdout
+    step: submit
+    file: job.out
  
 result:
-  use: analyse_performance
+  use: analyse_energy
   table:
-    name: result
+    name: energy
     style: pretty
-    sort: time_pat
+    sort: label_pat
     column:
-      - {title: "time in ns", _: time_pat}
-      - {title: "Total FLOPS", _: flop}
-      - {title: "GFLOP/s", _: gflop_pat}
+      - {title: "Node(s)",         _: label_pat}
+      - {title: "Timestamp start", _: time_pat_first}
+      - {title: "Timestamp end",   _: time_pat_last}
+      - {title: "Avg. Watts",      _: watt_pat_avg}
+      - {title: "Min. Watts",      _: watt_pat_min}
+      - {title: "Max. Watts",      _: watt_pat_max}
+      - {title: "Avg. VA",         _: va_pat_avg}
+      - {title: "Min. VA",         _: va_pat_min}
+      - {title: "Max. VA",         _: va_pat_max}
+ 
  
 step:
-  name: print_performance
-  use: app_parameters
-  do: |
-    python -c "print(\"Gigaflops: \",($flop/$nanoseconds))"
-    echo "Time: $nanoseconds ns"
+  - name:   submit
+    use:
+      - systemParameter
+      - executeset
+      - from: platform.xml
+        _: jobfiles
+      - from: platform.xml
+        _: executesub
+    do:
+      _:
+        $submit $submit_script
