@@ -15,4 +15,4 @@ module load slurm
 #source /home/sashkboos/env/bin/activate
 #nvidia-smi
 
-srun docker run --gpus all --rm --ipc=host -e HOME=$HOME -e USER=$USER --mount type=bind,source=/data/,dst=/data/ --mount type=bind,source=/home/sashkboos/ens10-d3.7/baselines,dst=/work -w /home/sashkboos/ens10-d3.7/baselines nvcr.io/nvidia/pytorch:24.01-py3 python3 get_power_nvml.py
+srun docker run --gpus --it all --rm --ipc=host -e HOME=$HOME -e USER=$USER --mount type=bind,source=/data/,dst=/data/ --mount type=bind,source=/home/sashkboos/ens10-d3.7/baselines,dst=/work -w /home/sashkboos/ens10-d3.7/baselines nvcr.io/nvidia/pytorch:24.01-py3 python3 /work/get_power_nvml.py
