@@ -5,8 +5,8 @@ benchmark: # having only a single benchmark, this key is optional
 
   #Configuration
   parameterset:
-    name: training_params
-    parameter: {data-path: /data/maelstrom/ENS10/new_dataset/ENS10_ERA5/netCDFs, model: UNet, epochs: 3}
+    name: app_params
+    parameter: {name: training_params, data-path: /data/maelstrom/ENS10/new_dataset/ENS10_ERA5/netCDFs, model: UNet, epochs: 3}
 
   #Operation
   step:
