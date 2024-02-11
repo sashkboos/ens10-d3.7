@@ -1,17 +1,46 @@
-benchmark: # having only a single benchmark, this key is optional
-  name: unet_train_a2
-  outpath: experiments_output
-  comment: Training UNet on A2 nodes
-
-  #Configuration
-  parameterset:
-    name: app_params
-    parameter: {name: training_params, data-path: /data/maelstrom/ENS10/new_dataset/ENS10_ERA5/netCDFs, model: UNet, epochs: 3}
-
-  #Operation
-  step:
-    name: say_hello
-    use: hello_parameter # special key _ can be skipped
-    do:
-      - _: echo $data-path $model $epochs # - is optional in this case, as ther is only one do entry
-        active: true
+name: analysis_example
+outpath: example4_run
+comment: analysing with JUBE
+ 
+ 
+parameterset:
+  name: app_parameters
+  parameter:
+    - name: flop
+      type: int
+      _: "8000000,700000,5000000,5000"
+    - name: nanoseconds
+      mode: python
+      type: float
+      _: "400+$flop*0.0005"
+ 
+patternset:
+  name: performance_patterns
+  pattern:
+    - {name: time_pat, type: int, _: "Time: $jube_pat_fp ns"}
+    - {name: gflop_pat, type: float, _: "Gigaflops:\\s+$jube_pat_fp"}
+ 
+analyser:
+  name: analyse_performance
+  use: performance_patterns
+  analyse:
+    step: print_performance
+    file: stdout
+ 
+result:
+  use: analyse_performance
+  table:
+    name: result
+    style: pretty
+    sort: time_pat
+    column:
+      - {title: "time in ns", _: time_pat}
+      - {title: "Total FLOPS", _: flop}
+      - {title: "GFLOP/s", _: gflop_pat}
+ 
+step:
+  name: print_performance
+  use: app_parameters
+  do: |
+    python -c "print(\"Gigaflops: \",($flop/$nanoseconds))"
+    echo "Time: $nanoseconds ns"
