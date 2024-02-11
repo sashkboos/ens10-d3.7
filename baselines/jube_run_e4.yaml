@@ -1,17 +1,17 @@
 benchmark: # having only a single benchmark, this key is optional
-  name: hello_world
-  outpath: bench_run
-  comment: A simple hello world in yaml
+  name: unet_train_a2
+  outpath: experiments_output
+  comment: Training UNet on A2 nodes
 
   #Configuration
   parameterset:
-    name: hello_parameter
-    parameter: {name: hello_str,  _: Hello World}
+    name: training_params
+    parameter: {data-path: /data/maelstrom/ENS10/new_dataset/ENS10_ERA5/netCDFs, model: UNet, epochs: 3}
 
   #Operation
   step:
     name: say_hello
     use: hello_parameter # special key _ can be skipped
     do:
-      - _: echo $hello_str # - is optional in this case, as ther is only one do entry
+      - _: echo $data-path $model $epochs # - is optional in this case, as ther is only one do entry
         active: true
